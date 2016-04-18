@@ -5,6 +5,19 @@ python:
   - "2.7"
 compiler:
   - gcc
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      sudo: required
+      cache: apt
+      env: DISTRO=trusty
+    - os: linux
+      dist: trusty
+      sudo: required
+      cache: apt
+      env: DISTRO=xenial
+    - os: osx
 before_install: # Use this to prepare the system to install prerequisites or dependencies
   # Define some config vars
   - export CI_SOURCE_PATH=$(pwd)
@@ -16,6 +29,8 @@ before_install: # Use this to prepare the system to install prerequisites or dep
 install: # Use this to install any prerequisites or dependencies necessary to run your build
   - sudo apt-get install -qq -y f2c libf2c2 libf2c2-dev doxygen cmake libeigen3-dev libjpeg-dev collada-dom-dev git jython libatlas-base-dev libboost-all-dev libpng12-dev
   - sudo apt-get install -qq -y ros-hydro-openrtm-aist ros-hydro-openrtm-aist-python ros-hydro-mk ros-hydro-rosbuild ros-hydro-rostest ros-hydro-roslang python-rosdep
+  - export CI_SOURCE_PATH=$(pwd)
+  - export REPOSITORY_NAME=${PWD##*/}
   - cd $CI_SOURCE_PATH
 before_script: # Use this to prepare your build for testing e.g. copy database configurations, environment variables, etc.
   - source /opt/ros/hydro/setup.bash
@@ -34,4 +49,7 @@ script: # All commands must exit with code 0 on success. Anything else is consid
   - export EXIT_STATUS=0; [ "`find devel_isolated/openhrp3/share/openhrp3 -iname '*.test'`" == "" ] && echo "[openhrp3] No tests ware found!!!"  || find devel_isolated/openhrp3/share/openhrp3 -iname "*.test" -print0 | xargs -0 -n1 rostest || export EXIT_STATUS=$?; [ $EXIT_STATUS == 0 ]
   - sudo /etc/init.d/omniorb4-nameserver stop || echo "stop omniserver just in case..."
   - export EXIT_STATUS=0; [ "`find devel_isolated/hrpsys/share/hrpsys -iname '*.test'`" == "" ] && echo "[hrpsys] No tests ware found!!!"  || find devel_isolated/hrpsys/share/hrpsys -iname "*.test" -print0 | xargs -0 -n1 rostest || export EXIT_STATUS=$?; [ $EXIT_STATUS == 0 ]
+  - echo "Testing branch $TRAVIS_BRANCH of $REPOSITORY_NAME"
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then docker run --rm -i -v $CI_SOURCE_PATH:$CI_SOURCE_PATH -e "TRAVIS_OS_NAME=$TRAVIS_OS_NAME" -e "CI_SOURCE_PATH=$CI_SOURCE_PATH" -e "HOME=$HOME" -t ubuntu:$DISTRO sh -c "cd $CI_SOURCE_PATH; ./.travis.sh"; fi
+  - if [ "$TRAVIS_OS_NAME" == "osx"   ]; then  source ./.travis.sh; fi
 after_failure:
